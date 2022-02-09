@@ -57,6 +57,9 @@
 #include <net/ppp_defs.h>
 #include "patchlevel.h"
 
+#include <cutils/sockets.h>
+#include <log/log.h>
+
 #if defined(__STDC__)
 #include <stdarg.h>
 #define __V(x)	x
@@ -85,7 +88,7 @@
  * Option descriptor structure.
  */
 
-typedef unsigned char	bool;
+//typedef unsigned char	bool;
 
 enum opt_type {
 	o_special_noarg = 0,

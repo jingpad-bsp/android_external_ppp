@@ -91,6 +91,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <cutils/sockets.h>
+#include <log/log.h>
 
 #ifdef HAS_SHADOW
 #include <shadow.h>
@@ -606,6 +608,37 @@ void start_link(unit)
 }
 
 /*
+* send ppplink end msg to service ,
+* then do something in vendor.
+*/
+int send_msg_toNetworkControl(char *cmd)
+{
+    int localfd;
+    int i;
+    for (i=0; i<3; i++) 
+    {
+         localfd = socket_local_client("network_hidl_common_socket", ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+         if (localfd >= 0) {
+            break;
+         }
+         sleep(1);//wait for 1s
+    }
+
+    if ( localfd < 0 ) {
+        ALOGE("Fail to connect socket server: %s (%d)\n", "network_hidl_common_socket", localfd);
+        return 1;
+    }
+    ALOGE("ppp Send cmd [%s] connect networkconctrol.\n", cmd);
+    if (write(localfd, cmd, strlen(cmd) + 1) <= 0) {
+        ALOGE("write ppp local socket  failed: %s\n", strerror(errno));
+        close(localfd);
+        return -1;
+    }
+    close(localfd);
+    return 0;
+}
+
+/*
  * LCP has terminated the link; go to the Dead phase and take the
  * physical layer down.
  */
@@ -613,6 +646,8 @@ void
 link_terminated(unit)
     int unit;
 {
+    char cmd[16];
+
     if (phase == PHASE_DEAD || phase == PHASE_MASTER)
 	return;
     new_phase(PHASE_DISCONNECT);
@@ -674,6 +709,8 @@ link_terminated(unit)
 	    mp_bundle_terminated();
     } else
 	new_phase(PHASE_DEAD);
+    snprintf(cmd, sizeof(cmd), "%s", "ppplinkend");
+    send_msg_toNetworkControl(cmd);
 }
 
 /*
